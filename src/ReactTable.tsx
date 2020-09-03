@@ -1,8 +1,19 @@
-import React, { ReactElement, PropsWithChildren } from 'react';
+import React, { ReactElement, PropsWithChildren, useCallback } from 'react';
 import { useTable, TableOptions, useSortBy, usePagination } from 'react-table';
-import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer, TableSortLabel } from '@material-ui/core';
+import {
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  TableContainer,
+  TableSortLabel,
+  TablePagination,
+} from '@material-ui/core';
 
 interface ReactTableProps<T extends object = {}> extends TableOptions<T> {}
+
+const rowsPerPageOptions = [3, 5, 10];
 
 export function ReactTable<T extends object>(props: PropsWithChildren<ReactTableProps<T>>): ReactElement {
   const { data, columns } = props;
@@ -29,6 +40,27 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
     },
     useSortBy,
     usePagination,
+  );
+
+  const handleChangePage = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
+      if (newPage === pageIndex + 1) {
+        nextPage();
+      } else if (newPage === pageIndex - 1) {
+        previousPage();
+      } else {
+        gotoPage(newPage);
+      }
+    },
+    [gotoPage, nextPage, pageIndex, previousPage],
+  );
+
+  const handleChangeRowsPerPage = useCallback(
+    (e) => {
+      setPageSize(Number(e.target.value));
+      gotoPage(0);
+    },
+    [gotoPage, setPageSize],
   );
 
   return (
@@ -79,6 +111,15 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
           </TableBody>
         </Table>
       </TableContainer>
+      <TablePagination
+        rowsPerPageOptions={rowsPerPageOptions}
+        component="div"
+        count={data.length}
+        rowsPerPage={pageSize}
+        page={pageIndex}
+        onChangePage={handleChangePage}
+        onChangeRowsPerPage={handleChangeRowsPerPage}
+      />
       <div>
         <button onClick={() => gotoPage(0)} disabled={!canPreviousPage}>
           {'<<'}
@@ -116,7 +157,7 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
             setPageSize(Number(e.target.value));
           }}
         >
-          {[3, 5, 10].map((pageSize) => (
+          {rowsPerPageOptions.map((pageSize) => (
             <option key={pageSize} value={pageSize}>
               Show {pageSize}
             </option>
