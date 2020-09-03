@@ -2,9 +2,9 @@ import React, { ReactElement, PropsWithChildren } from 'react';
 import { useTable, TableOptions, useSortBy } from 'react-table';
 import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer } from '@material-ui/core';
 
-interface Table<T extends object = {}> extends TableOptions<T> {}
+interface ReactTableProps<T extends object = {}> extends TableOptions<T> {}
 
-export function ReactTable<T extends object>(props: PropsWithChildren<Table<T>>): ReactElement {
+export function ReactTable<T extends object>(props: PropsWithChildren<ReactTableProps<T>>): ReactElement {
   const { data, columns } = props;
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = useTable(
     {
