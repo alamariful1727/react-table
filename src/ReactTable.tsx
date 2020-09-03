@@ -1,6 +1,6 @@
 import React, { ReactElement, PropsWithChildren } from 'react';
 import { useTable, TableOptions, useSortBy } from 'react-table';
-import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer } from '@material-ui/core';
+import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer, TableSortLabel } from '@material-ui/core';
 
 interface ReactTableProps<T extends object = {}> extends TableOptions<T> {}
 
@@ -24,8 +24,9 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
                 {headerGroup.headers.map((column) => {
                   return (
                     <TableCell {...column.getHeaderProps(column.getSortByToggleProps())}>
-                      {column.render('Header')}
-                      <span>{column.isSorted ? (column.isSortedDesc ? ' 🔽' : ' 🔼') : ''}</span>
+                      <TableSortLabel active={column.isSorted} direction={column.isSortedDesc ? 'desc' : 'asc'}>
+                        {column.render('Header')}
+                      </TableSortLabel>
                     </TableCell>
                   );
                 })}
