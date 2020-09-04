@@ -9,6 +9,8 @@ import {
   TableContainer,
   TableSortLabel,
   TablePagination,
+  FormControlLabel,
+  Switch,
 } from '@material-ui/core';
 
 interface ReactTableProps<T extends object = {}> extends TableOptions<T> {}
@@ -36,11 +38,13 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
     {
       columns,
       data,
-      initialState: { pageIndex: 0, pageSize: 3 },
+      initialState: { pageIndex: 0, pageSize: rowsPerPageOptions[0] },
     },
     useSortBy,
     usePagination,
   );
+
+  const [dense, setDense] = React.useState(false);
 
   const handleChangePage = useCallback(
     (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
@@ -62,6 +66,17 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
     },
     [gotoPage, setPageSize],
   );
+
+  const handleChangeDense = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setDense(event.target.checked);
+    },
+    [setDense],
+  );
+
+  const emptyRows = page.length
+    ? pageSize - Math.min(pageSize, data.length - pageIndex * pageSize)
+    : pageSize - Math.min(pageSize, data.length - pageIndex * pageSize) - 1;
 
   return (
     <div>
@@ -98,28 +113,45 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
             ))}
           </TableHead>
           <TableBody {...getTableBodyProps()}>
-            {page.map((row) => {
-              prepareRow(row);
-              return (
-                <TableRow {...row.getRowProps()}>
-                  {row.cells.map((cell) => {
-                    return <TableCell {...cell.getCellProps()}>{cell.render('Cell')}</TableCell>;
-                  })}
-                </TableRow>
-              );
-            })}
+            {page.length ? (
+              page.map((row) => {
+                prepareRow(row);
+                return (
+                  <TableRow {...row.getRowProps()}>
+                    {row.cells.map((cell) => {
+                      return <TableCell {...cell.getCellProps()}>{cell.render('Cell')}</TableCell>;
+                    })}
+                  </TableRow>
+                );
+              })
+            ) : (
+              <TableRow>
+                <TableCell align="right">No data</TableCell>
+              </TableRow>
+            )}
+            {emptyRows > 0 && (
+              <TableRow style={{ height: (dense ? 33 : 53) * emptyRows }}>
+                <TableCell colSpan={6} />
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
-      <TablePagination
-        rowsPerPageOptions={rowsPerPageOptions}
-        component="div"
-        count={data.length}
-        rowsPerPage={pageSize}
-        page={pageIndex}
-        onChangePage={handleChangePage}
-        onChangeRowsPerPage={handleChangeRowsPerPage}
-      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0px 12px' }}>
+        <FormControlLabel
+          control={<Switch color="primary" checked={dense} onChange={handleChangeDense} />}
+          label="Dense table"
+        />
+        <TablePagination
+          rowsPerPageOptions={rowsPerPageOptions}
+          component="div"
+          count={data.length}
+          rowsPerPage={pageSize}
+          page={pageIndex}
+          onChangePage={handleChangePage}
+          onChangeRowsPerPage={handleChangeRowsPerPage}
+        />
+      </div>
       <div>
         <button onClick={() => gotoPage(0)} disabled={!canPreviousPage}>
           {'<<'}
