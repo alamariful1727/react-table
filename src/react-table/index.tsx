@@ -1,5 +1,5 @@
-import React, { ReactElement, PropsWithChildren, useCallback } from 'react';
-import { useTable, TableOptions, useSortBy, usePagination } from 'react-table';
+import React, { ReactElement, PropsWithChildren, useCallback, useEffect } from 'react';
+import { useTable, TableOptions, useSortBy, usePagination, HeaderProps, FilterProps, useFilters } from 'react-table';
 import {
   Table,
   TableHead,
@@ -11,14 +11,65 @@ import {
   TablePagination,
   FormControlLabel,
   Switch,
+  TextField,
+  Button,
 } from '@material-ui/core';
+import { camelToWords } from './utils';
+import { fuzzyTextFilter } from './filters/fuzzyFilter';
+import { numericTextFilter } from './filters/numericFilter';
+
+const rowsPerPageOptions = [3, 5, 10];
+
+//? Filter functionalities
+const filterTypes = {
+  fuzzyText: fuzzyTextFilter,
+  numeric: numericTextFilter,
+};
+
+const DefaultHeader: React.FC<HeaderProps<any>> = ({ column }) => (
+  <>{column.id.startsWith('_') ? null : camelToWords(column.id)}</>
+);
+
+function DefaultColumnFilter<T extends object>({
+  column: { id, index, filterValue, setFilter, render, parent },
+}: FilterProps<T>) {
+  const [value, setValue] = React.useState(filterValue || '');
+
+  // ensure that reset loads the new value
+  useEffect(() => {
+    setValue(filterValue || '');
+  }, [filterValue]);
+
+  const firstIndex = !(parent && parent.index);
+  return (
+    <TextField
+      fullWidth
+      name={id}
+      label={render('Header')}
+      value={value}
+      autoFocus={index === 0 && firstIndex}
+      variant={'standard'}
+      onChange={(e) => {
+        setFilter(e.target.value || undefined);
+      }}
+    />
+  );
+}
+
+const defaultColumn = {
+  Filter: DefaultColumnFilter,
+  // Cell: TooltipCell,
+  Header: DefaultHeader,
+  // When using the useFlexLayout:
+  minWidth: 30, // minWidth is only used as a limit for resizing
+  width: 150, // width is used for both the flex-basis and flex-grow
+  maxWidth: 200, // maxWidth is only used as a limit for resizing
+};
 
 interface ReactTableProps<T extends object = {}> extends TableOptions<T> {
   showPagination?: boolean;
   onRowSelect?: (data: T) => void;
 }
-
-const rowsPerPageOptions = [3, 5, 10];
 
 export function ReactTable<T extends object>({
   data,
@@ -32,22 +83,27 @@ export function ReactTable<T extends object>({
     headerGroups,
     page,
     prepareRow,
-    pageCount,
-    canNextPage,
-    canPreviousPage,
-    state: { pageIndex, pageSize },
+    rows,
+    state: { pageIndex, pageSize, filters },
     gotoPage,
     nextPage,
     previousPage,
-    rows,
-    pageOptions,
     setPageSize,
-  } = useTable(
+    pageCount,
+    canNextPage,
+    canPreviousPage,
+    pageOptions,
+    allColumns,
+    setAllFilters,
+  } = useTable<T>(
     {
       columns,
+      filterTypes,
+      defaultColumn,
       data,
       initialState: { pageIndex: 0, pageSize: rowsPerPageOptions[0] },
     },
+    useFilters,
     useSortBy,
     usePagination,
   );
@@ -86,23 +142,28 @@ export function ReactTable<T extends object>({
     ? pageSize - Math.min(pageSize, data.length - pageIndex * pageSize)
     : pageSize - Math.min(pageSize, data.length - pageIndex * pageSize) - 1;
 
+  const resetFilters = useCallback(() => {
+    setAllFilters([]);
+  }, [setAllFilters]);
+
   return (
     <div>
-      <pre>
-        <code>
-          {JSON.stringify(
-            {
-              pageIndex,
-              pageSize,
-              pageCount,
-              canNextPage,
-              canPreviousPage,
-            },
-            null,
-            2,
-          )}
-        </code>
-      </pre>
+      <h2>Filters</h2>
+      <div>
+        {allColumns
+          .filter((it) => {
+            return it.canFilter;
+          })
+          .map((column) => {
+            return <div key={column.id}>{column.render('Filter')}</div>;
+          })}
+      </div>
+      {/* Reset filters */}
+      {Object.keys(filters).length > 0 && (
+        <Button color="primary" onClick={resetFilters}>
+          Reset
+        </Button>
+      )}
       <TableContainer>
         <Table {...getTableProps()}>
           <TableHead>
@@ -127,7 +188,7 @@ export function ReactTable<T extends object>({
                 return (
                   <TableRow
                     {...row.getRowProps()}
-                    className="cursor-pointer"
+                    style={{ cursor: 'pointer' }}
                     onClick={() => onRowSelect && onRowSelect(row.values as T)}
                   >
                     {row.cells.map((cell) => {
