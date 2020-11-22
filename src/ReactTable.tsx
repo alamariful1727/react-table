@@ -13,12 +13,19 @@ import {
   Switch,
 } from '@material-ui/core';
 
-interface ReactTableProps<T extends object = {}> extends TableOptions<T> {}
+interface ReactTableProps<T extends object = {}> extends TableOptions<T> {
+  showPagination?: boolean;
+  onRowSelect?: (data: T) => void;
+}
 
 const rowsPerPageOptions = [3, 5, 10];
 
-export function ReactTable<T extends object>(props: PropsWithChildren<ReactTableProps<T>>): ReactElement {
-  const { data, columns } = props;
+export function ReactTable<T extends object>({
+  data,
+  columns,
+  showPagination = true,
+  onRowSelect,
+}: PropsWithChildren<ReactTableProps<T>>): ReactElement {
   const {
     getTableProps,
     getTableBodyProps,
@@ -32,6 +39,7 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
     gotoPage,
     nextPage,
     previousPage,
+    rows,
     pageOptions,
     setPageSize,
   } = useTable(
@@ -117,7 +125,11 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
               page.map((row) => {
                 prepareRow(row);
                 return (
-                  <TableRow {...row.getRowProps()}>
+                  <TableRow
+                    {...row.getRowProps()}
+                    className="cursor-pointer"
+                    onClick={() => onRowSelect && onRowSelect(row.values as T)}
+                  >
                     {row.cells.map((cell) => {
                       return <TableCell {...cell.getCellProps()}>{cell.render('Cell')}</TableCell>;
                     })}
@@ -137,65 +149,69 @@ export function ReactTable<T extends object>(props: PropsWithChildren<ReactTable
           </TableBody>
         </Table>
       </TableContainer>
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0px 12px' }}>
-        <FormControlLabel
-          control={<Switch color="primary" checked={dense} onChange={handleChangeDense} />}
-          label="Dense table"
-        />
-        <TablePagination
-          rowsPerPageOptions={rowsPerPageOptions}
-          component="div"
-          count={data.length}
-          rowsPerPage={pageSize}
-          page={pageIndex}
-          onChangePage={handleChangePage}
-          onChangeRowsPerPage={handleChangeRowsPerPage}
-        />
-      </div>
-      <div>
-        <button onClick={() => gotoPage(0)} disabled={!canPreviousPage}>
-          {'<<'}
-        </button>{' '}
-        <button onClick={() => previousPage()} disabled={!canPreviousPage}>
-          {'<'}
-        </button>{' '}
-        <button onClick={() => nextPage()} disabled={!canNextPage}>
-          {'>'}
-        </button>{' '}
-        <button onClick={() => gotoPage(pageCount - 1)} disabled={!canNextPage}>
-          {'>>'}
-        </button>{' '}
-        <span>
-          Page{' '}
-          <strong>
-            {pageIndex + 1} of {pageOptions.length}
-          </strong>{' '}
-        </span>
-        <span>
-          | Go to page:{' '}
-          <input
-            type="number"
-            defaultValue={pageIndex + 1}
-            onChange={(e) => {
-              const page = e.target.value ? Number(e.target.value) - 1 : 0;
-              gotoPage(page);
-            }}
-            style={{ width: '100px' }}
-          />
-        </span>{' '}
-        <select
-          value={pageSize}
-          onChange={(e) => {
-            setPageSize(Number(e.target.value));
-          }}
-        >
-          {rowsPerPageOptions.map((pageSize) => (
-            <option key={pageSize} value={pageSize}>
-              Show {pageSize}
-            </option>
-          ))}
-        </select>
-      </div>
+      {showPagination && rows.length > 0 && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0px 12px' }}>
+            <FormControlLabel
+              control={<Switch color="primary" checked={dense} onChange={handleChangeDense} />}
+              label="Dense table"
+            />
+            <TablePagination
+              rowsPerPageOptions={rowsPerPageOptions}
+              component="div"
+              count={rows.length}
+              rowsPerPage={pageSize}
+              page={pageIndex}
+              onChangePage={handleChangePage}
+              onChangeRowsPerPage={handleChangeRowsPerPage}
+            />
+          </div>
+          <div>
+            <button onClick={() => gotoPage(0)} disabled={!canPreviousPage}>
+              {'<<'}
+            </button>{' '}
+            <button onClick={() => previousPage()} disabled={!canPreviousPage}>
+              {'<'}
+            </button>{' '}
+            <button onClick={() => nextPage()} disabled={!canNextPage}>
+              {'>'}
+            </button>{' '}
+            <button onClick={() => gotoPage(pageCount - 1)} disabled={!canNextPage}>
+              {'>>'}
+            </button>{' '}
+            <span>
+              Page{' '}
+              <strong>
+                {pageIndex + 1} of {pageOptions.length}
+              </strong>{' '}
+            </span>
+            <span>
+              | Go to page:{' '}
+              <input
+                type="number"
+                defaultValue={pageIndex + 1}
+                onChange={(e) => {
+                  const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                  gotoPage(page);
+                }}
+                style={{ width: '100px' }}
+              />
+            </span>{' '}
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+              }}
+            >
+              {rowsPerPageOptions.map((pageSize) => (
+                <option key={pageSize} value={pageSize}>
+                  Show {pageSize}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
     </div>
   );
 }
