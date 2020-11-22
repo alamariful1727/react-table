@@ -1,23 +1,61 @@
-import React from 'react';
-import { ReactTable } from './ReactTable';
-import { Column } from 'react-table';
+import React, { useMemo } from 'react';
+import { CellProps, Column, FilterProps } from 'react-table';
+import { MenuItem, TextField } from '@material-ui/core';
+import { ReactTable } from './react-table';
+
 interface IReactTable {
   firstName: string;
   lastName: string;
   age: number;
-  gender: string;
+  gender: 'F' | 'M';
   grade: number;
 }
+
+const SelectColumnFilter = ({
+  column: { filterValue, render, setFilter, preFilteredRows, id },
+}: FilterProps<IReactTable>) => {
+  const options = useMemo(() => {
+    const options = new Set<any>();
+    preFilteredRows.forEach((row) => {
+      options.add(row.values[id]);
+    });
+    return [...Array.from(options.values())];
+  }, [id, preFilteredRows]);
+
+  return (
+    <TextField
+      fullWidth
+      select
+      label={render('Header')}
+      value={filterValue || ''}
+      onChange={(e) => {
+        setFilter(e.target.value || undefined);
+      }}
+    >
+      <MenuItem value={''}>All</MenuItem>
+      {options.map((option, i) => (
+        <MenuItem key={i} value={option}>
+          {option}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+};
 
 const App = () => {
   const columns: Column<IReactTable>[] = [
     {
       Header: 'First Name',
       accessor: 'firstName',
+      aggregate: 'count',
+      Aggregated: ({ cell: { value } }: CellProps<IReactTable>) => `${value} Names`,
     },
     {
       Header: 'Last Name',
       accessor: 'lastName',
+      aggregate: 'uniqueCount',
+      filter: 'fuzzyText',
+      Aggregated: ({ cell: { value } }: CellProps<IReactTable>) => `${value} Unique Names`,
     },
     {
       Header: 'Age',
@@ -26,6 +64,8 @@ const App = () => {
     {
       Header: 'Gender',
       accessor: 'gender',
+      Filter: SelectColumnFilter,
+      filter: 'includes',
     },
     {
       Header: 'Grade',
